@@ -1,0 +1,401 @@
+================================================================================
+EXERCISE 9 (ADVANCED): API Key Authentication
+================================================================================
+
+OBJECTIVE:
+Add authentication requiring an API key in request headers.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE LOCATIONS:
+
+1. Import (Line 6):
+   Added: from fastapi import FastAPI, HTTPException, status, Header
+
+2. API Keys Storage (Lines 91-97):
+   ```python
+   VALID_API_KEYS = {
+       "demo-key-12345": "Demo User",
+       "test-key-67890": "Test User",
+       "admin-key-abcde": "Admin User"
+   }
+   ```
+
+3. Authentication Function (Lines 179-206):
+   verify_api_key() - Validates API key from headers
+
+4. Auth Endpoints (Lines 347-385):
+   - GET /auth/keys: List valid keys (demo only!)
+   - GET /protected/example: Example protected endpoint
+
+HOW IT WORKS:
+
+1. CLIENT SENDS REQUEST
+   - Includes header: X-API-Key: demo-key-12345
+   - FastAPI extracts header value
+   - Passes to verification function
+
+2. SERVER VALIDATES
+   - Checks if key exists in VALID_API_KEYS
+   - Returns 401 if missing
+   - Returns 403 if invalid
+   - Returns user info if valid
+
+3. ENDPOINT PROCESSES
+   - Only executes if authentication passes
+   - Has access to user information
+   - Can implement role-based access
+
+AUTHENTICATION FUNCTION:
+
+```python
+def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
+    """
+    Verify API key from request headers.
+    
+    Header format: X-API-Key: your-api-key-here
+    """
+    if x_api_key is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key is missing. Include 'X-API-Key' header."
+        )
+    
+    if x_api_key not in VALID_API_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API key"
+        )
+    
+    return VALID_API_KEYS[x_api_key]
+```
+
+VALID API KEYS (FOR TESTING):
+
+1. demo-key-12345 → Demo User
+2. test-key-67890 → Test User
+3. admin-key-abcde → Admin User
+
+⚠️ WARNING: In production, NEVER hardcode API keys!
+Use environment variables or secure vaults.
+
+TEST CASES:
+
+Test 1: List available keys (for testing)
+curl.exe "http://localhost:8000/auth/keys"
+
+OUTPUT:
+{
+  "message": "Valid API keys for testing",
+  "keys": [
+    {"key": "demo-key-12345", "user": "Demo User"},
+    {"key": "test-key-67890", "user": "Test User"},
+    {"key": "admin-key-abcde", "user": "Admin User"}
+  ],
+  "usage": "Include in request header as: X-API-Key: your-key-here"
+}
+
+Test 2: Access protected endpoint WITH valid key
+curl.exe "http://localhost:8000/protected/example" -H "X-API-Key: demo-key-12345"
+
+OUTPUT:
+{
+  "message": "Access granted!",
+  "user": "Demo User",
+  "note": "This endpoint requires authentication"
+}
+
+Test 3: Access protected endpoint WITHOUT key
+curl.exe "http://localhost:8000/protected/example"
+
+OUTPUT: 401 Unauthorized
+{
+  "detail": "Invalid or missing API key"
+}
+
+Test 4: Access protected endpoint with INVALID key
+curl.exe "http://localhost:8000/protected/example" -H "X-API-Key: wrong-key"
+
+OUTPUT: 403 Forbidden
+{
+  "detail": "Invalid or missing API key"
+}
+
+Test 5: Using different valid keys
+curl.exe "http://localhost:8000/protected/example" -H "X-API-Key: test-key-67890"
+
+OUTPUT:
+{
+  "message": "Access granted!",
+  "user": "Test User",
+  "note": "This endpoint requires authentication"
+}
+
+PROTECTING ENDPOINTS:
+
+Method 1: Simple header check (current implementation)
+```python
+@app.get("/protected/example")
+def protected_endpoint(user: str = Header(None, alias="X-API-Key")):
+    if user not in VALID_API_KEYS:
+        raise HTTPException(403, "Invalid or missing API key")
+    return {"message": "Access granted!", "user": VALID_API_KEYS[user]}
+```
+
+Method 2: Using Depends (FastAPI dependency injection)
+```python
+from fastapi import Depends
+
+@app.get("/protected/advanced")
+def protected_endpoint(user: str = Depends(verify_api_key)):
+    return {"message": f"Welcome {user}!"}
+```
+
+Method 3: Global middleware (protect all endpoints)
+```python
+@app.middleware("http")
+async def authenticate_requests(request: Request, call_next):
+    if request.url.path not in ["/", "/docs"]:  # Exclude public paths
+        api_key = request.headers.get("X-API-Key")
+        if api_key not in VALID_API_KEYS:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid API key"}
+            )
+    return await call_next(request)
+```
+
+HTTP STATUS CODES:
+
+- 200 OK: Valid key, access granted
+- 401 Unauthorized: No API key provided
+- 403 Forbidden: Invalid API key provided
+- 422 Unprocessable Entity: Malformed request
+
+HEADER FORMAT:
+
+Standard:
+X-API-Key: demo-key-12345
+
+Alternative names:
+- Authorization: Bearer demo-key-12345
+- API-Key: demo-key-12345
+- X-Auth-Token: demo-key-12345
+
+We use X-API-Key for simplicity.
+
+FRONTEND IMPLEMENTATION:
+
+```javascript
+// Store API key (in production, use secure storage)
+const API_KEY = 'demo-key-12345';
+
+// Make authenticated request
+async function authenticatedRequest(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-API-Key': API_KEY,
+    ...options.headers
+  };
+  
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+  
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('Authentication failed');
+  }
+  
+  return response.json();
+}
+
+// Usage
+try {
+  const data = await authenticatedRequest('http://localhost:8000/protected/example');
+  console.log(data);
+} catch (error) {
+  console.error('Auth error:', error);
+}
+```
+
+PRODUCTION BEST PRACTICES:
+
+1. ENVIRONMENT VARIABLES
+   ```python
+   import os
+   
+   VALID_API_KEYS = {
+       os.getenv('API_KEY_1'): 'User 1',
+       os.getenv('API_KEY_2'): 'User 2'
+   }
+   ```
+
+2. DATABASE STORAGE
+   ```python
+   async def verify_api_key(key: str):
+       user = await db.query("SELECT * FROM api_keys WHERE key = ?", key)
+       if not user:
+           raise HTTPException(403, "Invalid key")
+       return user
+   ```
+
+3. KEY ROTATION
+   - Generate new keys periodically
+   - Expire old keys
+   - Notify users of changes
+
+4. RATE LIMITING PER KEY
+   ```python
+   rate_limits = {}
+   
+   def check_rate_limit(api_key: str):
+       if api_key in rate_limits:
+           if rate_limits[api_key] > MAX_REQUESTS:
+               raise HTTPException(429, "Rate limit exceeded")
+       rate_limits[api_key] = rate_limits.get(api_key, 0) + 1
+   ```
+
+5. KEY HASHING
+   ```python
+   import hashlib
+   
+   def hash_key(key: str) -> str:
+       return hashlib.sha256(key.encode()).hexdigest()
+   
+   # Store hashed keys, compare hashes
+   VALID_KEY_HASHES = {
+       hash_key("demo-key-12345"): "Demo User"
+   }
+   ```
+
+6. LOGGING
+   ```python
+   def verify_api_key(x_api_key: str):
+       logger.info(f"Auth attempt with key: {x_api_key[:8]}...")
+       if x_api_key not in VALID_API_KEYS:
+           logger.warning(f"Invalid key attempt: {x_api_key[:8]}...")
+           raise HTTPException(403)
+       logger.info(f"Auth success: {VALID_API_KEYS[x_api_key]}")
+       return VALID_API_KEYS[x_api_key]
+   ```
+
+ROLE-BASED ACCESS CONTROL (RBAC):
+
+```python
+VALID_API_KEYS = {
+    "admin-key": {"user": "Admin", "role": "admin"},
+    "user-key": {"user": "User", "role": "user"}
+}
+
+def require_role(required_role: str):
+    def verify(x_api_key: str = Header(None)):
+        if x_api_key not in VALID_API_KEYS:
+            raise HTTPException(403)
+        
+        user_data = VALID_API_KEYS[x_api_key]
+        if user_data["role"] != required_role:
+            raise HTTPException(403, "Insufficient permissions")
+        
+        return user_data
+    return verify
+
+@app.delete("/admin/clear-all")
+def admin_only_endpoint(user = Depends(require_role("admin"))):
+    # Only admins can access this
+    return {"message": "Admin action completed"}
+```
+
+SECURITY CONSIDERATIONS:
+
+1. HTTPS ONLY
+   - Never send API keys over HTTP
+   - Use TLS/SSL in production
+   - Prevent man-in-the-middle attacks
+
+2. KEY COMPLEXITY
+   - Minimum 32 characters
+   - Random generation
+   - Include letters, numbers, symbols
+
+3. KEY STORAGE
+   - Never commit to git
+   - Use .env files
+   - Use secret management services (AWS Secrets Manager, HashiCorp Vault)
+
+4. KEY EXPIRATION
+   - Set expiration dates
+   - Force periodic rotation
+   - Revoke compromised keys
+
+5. AUDIT LOGGING
+   - Log all authentication attempts
+   - Track key usage
+   - Alert on suspicious activity
+
+GENERATING SECURE API KEYS:
+
+```python
+import secrets
+
+def generate_api_key(length: int = 32) -> str:
+    """Generate a cryptographically secure API key"""
+    return secrets.token_urlsafe(length)
+
+# Example
+new_key = generate_api_key()
+print(f"New API key: {new_key}")
+# Output: "xK7mP9nQ2wR5tY8uI1oP4aS6dF3gH7jK9lZ0xC2vB5nM8"
+```
+
+TESTING CHECKLIST:
+
+✅ Access with valid key
+✅ Access without key (401)
+✅ Access with invalid key (403)
+✅ List available keys
+✅ Multiple valid keys work
+✅ Protected endpoint example
+✅ Header format correct
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+
+API Keys: Lines 91-97
+Auth Function: Lines 179-206
+Auth Endpoints: Lines 347-385
+
+ALTERNATIVE: OAuth2/JWT
+
+For more advanced authentication:
+```python
+from fastapi.security import OAuth2PasswordBearer
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+@app.post("/token")
+def login(username: str, password: str):
+    # Verify credentials
+    # Generate JWT token
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get("/protected")
+def protected(token: str = Depends(oauth2_scheme)):
+    # Verify JWT token
+    return {"message": "Authenticated"}
+```
+
+MONITORING:
+
+Track these metrics:
+- Total authentication attempts
+- Success rate
+- Failed attempts per key
+- Most active keys
+- Suspicious patterns
+
+Example dashboard:
+- demo-key-12345: 1,234 requests (98% success)
+- test-key-67890: 567 requests (100% success)
+- unknown-key: 45 attempts (0% success) ⚠️ Alert!

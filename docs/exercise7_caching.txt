@@ -1,0 +1,271 @@
+================================================================================
+EXERCISE 7 (ADVANCED): Add Caching - Store Query Results for 5 Minutes
+================================================================================
+
+OBJECTIVE:
+Implement caching to store query results for 5 minutes, improving performance
+for repeated queries.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE LOCATIONS:
+
+1. Imports (Line 11):
+   Added: from datetime import datetime, timedelta
+   Added: import hashlib
+
+2. Cache Storage (Lines 85-88):
+   ```python
+   query_cache: Dict[str, Dict] = {}
+   CACHE_TTL_MINUTES = 5
+   ```
+
+3. Cache Functions (Lines 127-177):
+   - generate_cache_key(): Create unique hash for query
+   - get_cached_result(): Retrieve cached result if valid
+   - set_cached_result(): Store result in cache
+   - clear_expired_cache(): Remove expired entries
+
+4. Cache Endpoints (Lines 305-345):
+   - GET /cache/stats: View cache statistics
+   - DELETE /cache: Clear all cached results
+
+5. Modified query_documents() (Lines 540-575):
+   - Check cache before processing
+   - Store result in cache after processing
+
+HOW IT WORKS:
+
+1. CACHE KEY GENERATION
+   - Combines question + top_k parameter
+   - Creates MD5 hash for consistent keys
+   - Same query always gets same key
+
+2. CACHE LOOKUP
+   - Before processing query, check cache
+   - If found and not expired, return immediately
+   - Logs "CACHE HIT" to console
+
+3. CACHE STORAGE
+   - After processing query, store result
+   - Includes timestamp for expiration check
+   - Logs "CACHE STORED" to console
+
+4. CACHE EXPIRATION
+   - TTL (Time To Live): 5 minutes
+   - Automatic cleanup on access
+   - Manual cleanup via clear_expired_cache()
+
+CACHE STRUCTURE:
+
+```python
+query_cache = {
+    "cache_key_hash": {
+        "result": {
+            "question": "What is Docker?",
+            "answer": "...",
+            "sources": [...],
+            "timestamp": "2025-12-04T18:45:26",
+            "processing_time_ms": 6.43
+        },
+        "timestamp": datetime(2025, 12, 4, 18, 45, 26)
+    }
+}
+```
+
+TEST CASES:
+
+Test 1: First query (cache miss)
+curl.exe -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Docker?\", \"top_k\": 2}"
+
+Console Output:
+[2025-12-04 18:45:26] NEW QUERY RECEIVED
+Question: What is Docker?
+[CACHE STORED] Result cached for 5 minutes
+
+Test 2: Same query again (cache hit)
+curl.exe -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Docker?\", \"top_k\": 2}"
+
+Console Output:
+[2025-12-04 18:45:30] NEW QUERY RECEIVED
+Question: What is Docker?
+[CACHE HIT] Returning cached result
+
+Notice: Much faster response time!
+
+Test 3: Check cache stats
+curl.exe "http://localhost:8000/cache/stats"
+
+OUTPUT:
+{
+  "total_cached_queries": 1,
+  "cache_ttl_minutes": 5,
+  "cached_entries": [
+    {
+      "cache_key": "18aefc3c0af8deb7808ab3e370f6a95b",
+      "question": "What is Docker?",
+      "age_seconds": 23.27,
+      "expires_in_seconds": 276.73
+    }
+  ]
+}
+
+Test 4: Clear cache
+curl.exe -X DELETE "http://localhost:8000/cache"
+
+OUTPUT:
+{
+  "message": "Cache cleared successfully",
+  "entries_removed": 1
+}
+
+Test 5: Different top_k (different cache key)
+curl.exe -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Docker?\", \"top_k\": 3}"
+
+Result: Cache miss (different top_k = different cache key)
+
+BENEFITS:
+
+1. PERFORMANCE
+   - Cached queries return instantly
+   - No re-computation needed
+   - Reduced CPU usage
+
+2. COST SAVINGS
+   - Fewer API calls to LLM (in production)
+   - Lower embedding generation costs
+   - Reduced database queries
+
+3. USER EXPERIENCE
+   - Faster response times
+   - Better for popular queries
+   - Improved scalability
+
+4. LOAD REDUCTION
+   - Less work for server
+   - Can handle more concurrent users
+   - Better resource utilization
+
+CACHE HIT RATE:
+
+Example metrics:
+- Query 1: "What is Python?" → Cache miss (0.5ms)
+- Query 2: "What is Python?" → Cache hit (0.01ms) - 50x faster!
+- Query 3: "What is Docker?" → Cache miss (0.5ms)
+- Query 4: "What is Python?" → Cache hit (0.01ms)
+
+Hit rate: 50% (2 hits / 4 queries)
+
+CACHE INVALIDATION:
+
+Cache is automatically invalidated when:
+1. 5 minutes have passed (TTL expired)
+2. Manual cache clear (DELETE /cache)
+3. Server restart
+
+Consider invalidating cache when:
+- Documents are added/updated/deleted
+- Embeddings change
+- Answer generation logic changes
+
+PRODUCTION IMPROVEMENTS:
+
+1. USE REDIS OR MEMCACHED
+   ```python
+   import redis
+   cache = redis.Redis(host='localhost', port=6379)
+   cache.setex(cache_key, 300, json.dumps(result))  # 300 seconds = 5 minutes
+   ```
+
+2. DISTRIBUTED CACHING
+   - Share cache across multiple servers
+   - Consistent cache hits
+   - Better scalability
+
+3. CACHE WARMING
+   - Pre-populate cache with popular queries
+   - Reduce cold start latency
+   - Improve user experience
+
+4. CACHE ANALYTICS
+   - Track hit/miss rates
+   - Identify popular queries
+   - Optimize cache size
+
+5. SMART EXPIRATION
+   - Different TTL for different queries
+   - Longer TTL for stable content
+   - Shorter TTL for dynamic content
+
+6. CACHE COMPRESSION
+   - Compress cached data
+   - Save memory
+   - Faster serialization
+
+MONITORING:
+
+Track these metrics:
+- Cache hit rate (%)
+- Average response time (cached vs uncached)
+- Cache size (number of entries)
+- Memory usage
+- Expiration rate
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+
+Cache Storage: Lines 85-88
+Cache Functions: Lines 127-177
+Cache Endpoints: Lines 305-345
+Query Integration: Lines 540-575
+
+CONFIGURATION:
+
+Change cache TTL:
+```python
+CACHE_TTL_MINUTES = 10  # Cache for 10 minutes instead of 5
+```
+
+Disable caching:
+```python
+# Comment out cache check in query_documents()
+# cached_result = get_cached_result(cache_key)
+# if cached_result:
+#     return Answer(**cached_result)
+```
+
+TESTING CACHE EXPIRATION:
+
+1. Send a query
+2. Check cache stats (should show 1 entry)
+3. Wait 5 minutes
+4. Send same query again
+5. Check cache stats (should show 0 entries - expired)
+6. Query will be processed fresh
+
+MEMORY CONSIDERATIONS:
+
+Each cached entry stores:
+- Question text (~100 bytes)
+- Answer text (~500 bytes)
+- Sources (3 docs × ~200 bytes = 600 bytes)
+- Metadata (~100 bytes)
+
+Total per entry: ~1.3 KB
+
+1000 cached queries ≈ 1.3 MB
+10,000 cached queries ≈ 13 MB
+
+Reasonable for in-memory caching!
+
+CACHE KEY COLLISION:
+
+MD5 hash provides:
+- 128-bit hash space
+- Virtually no collisions
+- Consistent keys
+
+Probability of collision:
+- 1 in 2^128 (extremely low)
+- Safe for production use

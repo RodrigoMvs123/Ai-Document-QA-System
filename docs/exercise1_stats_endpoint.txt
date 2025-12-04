@@ -1,0 +1,65 @@
+================================================================================
+EXERCISE 1 (BEGINNER): GET /stats Endpoint
+================================================================================
+
+OBJECTIVE:
+Add a new endpoint that returns total documents and categories statistics.
+
+IMPLEMENTATION:
+Added a new GET endpoint at /stats that:
+1. Counts total documents in the database
+2. Groups documents by category and counts each
+3. Returns timestamp of the request
+
+CODE ADDED (after health_check endpoint):
+```python
+@app.get("/stats", tags=["Health"])
+def get_stats():
+    """
+    Get database statistics including total documents and categories.
+    
+    Returns:
+    - total_documents: Total number of documents in the database
+    - categories: List of unique categories with document counts
+    - timestamp: Current server timestamp
+    """
+    # Count documents by category
+    category_counts = {}
+    for doc in documents_db.values():
+        category = doc.metadata.get("category", "uncategorized")
+        category_counts[category] = category_counts.get(category, 0) + 1
+    
+    return {
+        "total_documents": len(documents_db),
+        "categories": category_counts,
+        "timestamp": datetime.now().isoformat()
+    }
+```
+
+TEST COMMAND:
+curl.exe "http://localhost:8001/stats"
+
+OUTPUT:
+{
+  "total_documents": 5,
+  "categories": {
+    "programming": 1,
+    "frameworks": 1,
+    "ai": 1,
+    "databases": 1,
+    "devops": 1
+  },
+  "timestamp": "2025-12-04T15:18:54.814877"
+}
+
+NOTES:
+- The endpoint shows we have 5 documents across 5 different categories
+- Each category has exactly 1 document
+- If a document has no category in metadata, it's counted as "uncategorized"
+- This is useful for dashboard displays and monitoring
+
+NEXT STEPS:
+You can now access this endpoint from:
+- Browser: http://localhost:8001/stats
+- FastAPI docs: http://localhost:8001/docs
+- Any HTTP client or application

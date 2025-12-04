@@ -1,0 +1,44 @@
+================================================================================
+TEST 1: Query Documents (RAG Endpoint)
+================================================================================
+
+DESCRIPTION:
+This test queries the RAG system with a question. The API retrieves the most 
+relevant documents using semantic search and generates an answer based on the 
+retrieved context.
+
+COMMAND:
+curl.exe -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python?\", \"top_k\": 2}"
+
+OUTPUT:
+{
+  "question": "What is Python?",
+  "answer": "Based on the available information: Docker containers package applications with dependencies, ensuring consistency across development and production environments. Vector databases store embeddings and enable semantic search. Popular opt... This relates to your question about 'What is Python?'. The most relevant information comes from 2 source(s).",
+  "sources": [
+    {
+      "doc_id": "doc_005",
+      "text": "Docker containers package applications with dependencies, ensuring consistency across development and production environments.",
+      "similarity_score": 0.8489,
+      "metadata": {
+        "category": "devops",
+        "tool": "docker"
+      }
+    },
+    {
+      "doc_id": "doc_004",
+      "text": "Vector databases store embeddings and enable semantic search. Popular options include Pinecone, FAISS, and ChromaDB.",
+      "similarity_score": 0.8434,
+      "metadata": {
+        "category": "databases",
+        "type": "vector"
+      }
+    }
+  ],
+  "timestamp": "2025-12-04T14:52:34.467170",
+  "processing_time_ms": 1.36
+}
+
+NOTES:
+- The top_k parameter limits results to 2 most relevant documents
+- Similarity scores range from 0 to 1 (higher is more relevant)
+- Processing time shows the query took 1.36 milliseconds

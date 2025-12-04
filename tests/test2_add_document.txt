@@ -1,0 +1,24 @@
+================================================================================
+TEST 2: Add New Document
+================================================================================
+
+DESCRIPTION:
+This test adds a new document to the database. The document must have a unique
+doc_id and text content of at least 10 characters. Optional metadata can be 
+included for categorization.
+
+COMMAND:
+curl.exe -X POST "http://localhost:8000/documents" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_006\", \"text\": \"Machine learning is a subset of AI that enables systems to learn from data without explicit programming.\"}"
+
+OUTPUT:
+{
+  "message": "Document added successfully",
+  "doc_id": "doc_006",
+  "text_length": 109
+}
+
+NOTES:
+- The API validates that doc_id is alphanumeric (with _ or - allowed)
+- Text must be at least 10 characters long
+- Returns HTTP 201 Created status on success
+- If doc_id already exists, returns HTTP 400 Bad Request error

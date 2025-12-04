@@ -1,0 +1,93 @@
+================================================================================
+EXERCISE 2 (BEGINNER): Input Validation for Questions
+================================================================================
+
+OBJECTIVE:
+Add input validation to ensure questions don't contain special characters.
+
+IMPLEMENTATION:
+Added a validator to the Query model that checks the question field using regex.
+
+CODE LOCATION: Lines 40-53 in generativeai.py
+Added inside the Query class (after the field definitions)
+
+CODE ADDED:
+```python
+class Query(BaseModel):
+    """Query model"""
+    question: str = Field(..., min_length=5, description="User question")
+    top_k: int = Field(default=3, ge=1, le=10, description="Number of results")
+    include_sources: bool = Field(default=True, description="Include source docs")
+    
+    @validator('question')  # ← Line 46: Pydantic validator decorator
+    def validate_question(cls, v):
+        """Validate that question doesn't contain special characters"""
+        # Allow: letters, numbers, spaces, and basic punctuation (. , ? !)
+        import re
+        if not re.match(r'^[a-zA-Z0-9\s.,?!\-]+$', v):
+            raise ValueError(
+                'Question must only contain letters, numbers, spaces, and basic punctuation (. , ? ! -)'
+            )
+        return v
+```
+
+HOW IT WORKS:
+1. The @validator('question') decorator tells Pydantic to validate the 'question' field
+2. The regex pattern ^[a-zA-Z0-9\s.,?!\-]+$ allows:
+   - a-zA-Z: Letters (uppercase and lowercase)
+   - 0-9: Numbers
+   - \s: Spaces
+   - .,?!-: Basic punctuation (period, comma, question mark, exclamation, hyphen)
+3. If validation fails, it raises a ValueError with a clear message
+4. FastAPI automatically returns HTTP 422 with validation error details
+
+TEST CASES:
+
+1. VALID - Basic question:
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python?\", \"top_k\": 2}"
+
+OUTPUT: ✅ Success - Returns answer with sources
+
+2. VALID - Question with allowed punctuation:
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python, and how does it work?\", \"top_k\": 2}"
+
+OUTPUT: ✅ Success - Returns answer with sources
+
+3. INVALID - Special characters (@#$):
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python@#$?\", \"top_k\": 2}"
+
+OUTPUT: ❌ Error
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "question"],
+      "msg": "Value error, Question must only contain letters, numbers, spaces, and basic punctuation (. , ? ! -)",
+      "input": "What is Python@#$?"
+    }
+  ]
+}
+
+4. INVALID - Ampersand (&):
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python & FastAPI?\", \"top_k\": 2}"
+
+OUTPUT: ❌ Error - Same validation error message
+
+BENEFITS:
+- Prevents SQL injection attempts
+- Blocks potentially malicious input
+- Ensures clean, readable questions
+- Provides clear error messages to users
+- Validation happens BEFORE processing (saves resources)
+
+WHERE IN THE CODE:
+- Location: generativeai.py, lines 46-53
+- Inside: Query class (Pydantic model)
+- Triggered: Automatically when /query endpoint receives a request
+- Before: Any database queries or processing happens
+
+NOTES:
+- Pydantic validators run automatically on model instantiation
+- The validation is declarative - no need to call it manually
+- FastAPI handles the error response formatting
+- You can customize the allowed characters by modifying the regex pattern

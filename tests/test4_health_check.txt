@@ -1,0 +1,26 @@
+================================================================================
+TEST 4: Health Check Endpoint
+================================================================================
+
+DESCRIPTION:
+This test checks if the API is running and healthy. It returns basic information
+about the API status, version, total documents in the database, and current 
+timestamp. This is useful for monitoring and debugging.
+
+COMMAND:
+curl.exe "http://localhost:8000/"
+
+OUTPUT:
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "total_documents": 6,
+  "timestamp": "2025-12-04T14:51:40.912499"
+}
+
+NOTES:
+- This is a GET request to the root endpoint
+- Returns HTTP 200 OK if the server is running
+- Shows total_documents count in the database
+- Timestamp is in ISO 8601 format
+- Useful for load balancer health checks in production

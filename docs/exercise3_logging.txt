@@ -1,0 +1,164 @@
+================================================================================
+EXERCISE 3 (BEGINNER): Add Logging - Print Query and Processing Time
+================================================================================
+
+OBJECTIVE:
+Add logging to print query information and processing time to the console.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE CHANGES:
+
+LOCATION 1: Lines 368-373 in generativeai.py
+Added at the START of query_documents() function (after start_time)
+
+```python
+# LOG: Query received
+print(f"\n{'='*60}")
+print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] NEW QUERY RECEIVED")
+print(f"Question: {query.question}")
+print(f"Top K: {query.top_k}")
+print(f"{'='*60}")
+```
+
+LOCATION 2: Lines 399-405 in generativeai.py  
+Added AFTER processing time calculation (before return statement)
+
+```python
+# LOG: Query completed
+print(f"\n[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] QUERY COMPLETED")
+print(f"Processing Time: {round(processing_time, 2)} ms")
+print(f"Documents Retrieved: {len(relevant_docs)}")
+print(f"Answer Length: {len(answer_text)} characters")
+print(f"{'='*60}\n")
+```
+
+HOW TO SEE THE LOGS IN ACTION:
+
+STEP 1: Stop the background server
+Get-Job | Stop-Job; Get-Job | Remove-Job
+
+STEP 2: Run server in foreground (so you can see console output)
+python -m uvicorn generativeai:app --host 0.0.0.0 --port 8001
+
+STEP 3: In ANOTHER terminal/PowerShell window, send a query:
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Docker?\", \"top_k\": 2}"
+
+STEP 4: Look at the FIRST terminal - you'll see:
+
+============================================================
+[2025-12-04 15:57:07] NEW QUERY RECEIVED
+Question: What is Docker?
+Top K: 2
+============================================================
+
+[2025-12-04 15:57:07] QUERY COMPLETED
+Processing Time: 0.23 ms
+Documents Retrieved: 2
+Answer Length: 245 characters
+============================================================
+
+WHAT INFORMATION IS LOGGED:
+
+WHEN QUERY STARTS:
+✓ Timestamp (when query was received)
+✓ The question text
+✓ Top K parameter (how many documents to retrieve)
+
+WHEN QUERY COMPLETES:
+✓ Timestamp (when processing finished)
+✓ Processing time in milliseconds
+✓ Number of documents retrieved
+✓ Length of the generated answer
+
+WHY THIS IS USEFUL:
+
+1. PERFORMANCE MONITORING
+   - See how long each query takes
+   - Identify slow queries
+   - Track system performance over time
+
+2. DEBUGGING
+   - See exactly what questions users are asking
+   - Verify the system is processing requests
+   - Troubleshoot errors
+
+3. ANALYTICS
+   - Understand user behavior
+   - Track popular questions
+   - Analyze usage patterns
+
+4. PRODUCTION MONITORING
+   - Real-time visibility into API usage
+   - Alert on performance degradation
+   - Audit trail of all queries
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+Function: query_documents() (the POST /query endpoint)
+Lines: 
+  - 368-373: Log when query is received
+  - 399-405: Log when query is completed
+
+Triggered: Every time someone calls POST /query endpoint
+
+TESTING THE LOGGING:
+
+Test 1: Valid query
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Python?\", \"top_k\": 2}"
+
+Expected logs:
+- Shows "NEW QUERY RECEIVED" with question
+- Shows "QUERY COMPLETED" with timing
+
+Test 2: Different top_k value
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is FastAPI?\", \"top_k\": 5}"
+
+Expected logs:
+- Shows Top K: 5
+- Shows Documents Retrieved: 5
+
+Test 3: Using /docs interface
+1. Go to http://localhost:8001/docs
+2. Try POST /query
+3. Check the terminal running uvicorn
+4. See the logs appear in real-time!
+
+PRODUCTION BEST PRACTICES:
+
+For production systems, use Python's logging module instead of print():
+
+```python
+import logging
+
+# At the top of the file
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# In the function
+logger.info(f"Query received: {query.question}")
+logger.info(f"Processing time: {processing_time} ms")
+```
+
+Benefits of logging module:
+- Log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Log to files, not just console
+- Log rotation (prevent huge log files)
+- Integration with monitoring tools (Datadog, CloudWatch, etc.)
+- Structured logging (JSON format)
+- Performance (async logging)
+
+NEXT STEPS:
+
+✅ Exercise 1: GET /stats endpoint - COMPLETE
+✅ Exercise 2: Input validation - COMPLETE  
+✅ Exercise 3: Logging - COMPLETE
+
+Ready for intermediate exercises? Next up:
+- Exercise 4: Pagination for /documents endpoint
+- Exercise 5: Filter by similarity score threshold
+- Exercise 6: Update documents (PUT endpoint)

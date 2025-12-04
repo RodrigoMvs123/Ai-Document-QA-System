@@ -1,0 +1,274 @@
+================================================================================
+EXERCISE 6 (INTERMEDIATE): Update Documents (PUT Endpoint)
+================================================================================
+
+OBJECTIVE:
+Create a PUT endpoint to update existing documents in the database.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE LOCATION: Lines 385-432 in generativeai.py
+Added new update_document() function after delete_document()
+
+CODE IMPLEMENTATION:
+
+```python
+@app.put("/documents/{doc_id}", tags=["Documents"])
+def update_document(doc_id: str, document: Document):
+    """
+    Update an existing document.
+    
+    Parameters:
+    - doc_id: The ID of the document to update (in URL path)
+    - document: The new document data (in request body)
+    
+    Note: The doc_id in the URL must match the doc_id in the request body.
+    """
+    # Check if document exists
+    if doc_id not in documents_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document {doc_id} not found"
+        )
+    
+    # Verify doc_id in body matches URL parameter
+    if document.doc_id != doc_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Document ID in body ({document.doc_id}) must match URL parameter ({doc_id})"
+        )
+    
+    # Store old document for response
+    old_doc = documents_db[doc_id]
+    
+    # Update the document
+    documents_db[doc_id] = document
+    
+    return {
+        "message": "Document updated successfully",
+        "doc_id": doc_id,
+        "old_text_length": len(old_doc.text),
+        "new_text_length": len(document.text),
+        "metadata_updated": old_doc.metadata != document.metadata
+    }
+```
+
+HTTP METHOD: PUT
+
+PUT is used for updating existing resources:
+- POST: Create new resource
+- GET: Read resource
+- PUT: Update existing resource (full replacement)
+- PATCH: Partial update (not implemented here)
+- DELETE: Remove resource
+
+HOW IT WORKS:
+
+1. Extract doc_id from URL path (/documents/{doc_id})
+2. Check if document exists (404 if not)
+3. Validate doc_id in body matches URL (400 if mismatch)
+4. Store old document for comparison
+5. Replace document in database
+6. Return success with change summary
+
+VALIDATION:
+
+1. Document must exist (404 error if not)
+2. doc_id in URL must match doc_id in body (400 error if not)
+3. Document must pass Pydantic validation (text >= 10 chars, etc.)
+
+RESPONSE FIELDS:
+
+- message: Success message
+- doc_id: ID of updated document
+- old_text_length: Length of previous text
+- new_text_length: Length of new text
+- metadata_updated: Boolean indicating if metadata changed
+
+TEST CASES:
+
+Test 1: Successful update
+curl.exe -X PUT "http://localhost:8001/documents/doc_001" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_001\", \"text\": \"Python is an amazing high-level programming language with excellent readability and a vast ecosystem of libraries.\", \"metadata\": {\"category\": \"programming\", \"language\": \"python\", \"updated\": true}}"
+
+OUTPUT:
+{
+  "message": "Document updated successfully",
+  "doc_id": "doc_001",
+  "old_text_length": 131,
+  "new_text_length": 114,
+  "metadata_updated": true
+}
+
+Test 2: Verify update worked
+curl.exe "http://localhost:8001/documents/doc_001"
+
+OUTPUT:
+{
+  "doc_id": "doc_001",
+  "text": "Python is an amazing high-level programming language with excellent readability and a vast ecosystem of libraries.",
+  "metadata": {
+    "category": "programming",
+    "language": "python",
+    "updated": true  ← New field added
+  }
+}
+
+Test 3: Update non-existent document
+curl.exe -X PUT "http://localhost:8001/documents/doc_999" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_999\", \"text\": \"This document does not exist\"}"
+
+OUTPUT: ❌ Error
+{
+  "detail": "Document doc_999 not found"
+}
+HTTP Status: 404 Not Found
+
+Test 4: Mismatched doc_id
+curl.exe -X PUT "http://localhost:8001/documents/doc_001" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_002\", \"text\": \"Mismatched ID\"}"
+
+OUTPUT: ❌ Error
+{
+  "detail": "Document ID in body (doc_002) must match URL parameter (doc_001)"
+}
+HTTP Status: 400 Bad Request
+
+Test 5: Invalid text (too short)
+curl.exe -X PUT "http://localhost:8001/documents/doc_001" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_001\", \"text\": \"Short\"}"
+
+OUTPUT: ❌ Error - Pydantic validation error (text must be >= 10 characters)
+
+Test 6: Update only metadata
+curl.exe -X PUT "http://localhost:8001/documents/doc_001" -H "Content-Type: application/json" -d "{\"doc_id\": \"doc_001\", \"text\": \"Python is a high-level programming language known for its simplicity and readability. It is widely used in AI and machine learning.\", \"metadata\": {\"category\": \"programming\", \"language\": \"python\", \"version\": \"3.11\"}}"
+
+USE CASES:
+
+1. CONTENT UPDATES
+   - Fix typos
+   - Update information
+   - Improve descriptions
+   - Refresh outdated content
+
+2. METADATA MANAGEMENT
+   - Add tags
+   - Update categories
+   - Change classifications
+   - Add timestamps
+
+3. CONTENT VERSIONING
+   - Track changes over time
+   - Maintain history
+   - Rollback if needed
+
+4. BULK UPDATES
+   - Update multiple documents
+   - Standardize format
+   - Apply corrections
+
+CRUD OPERATIONS COMPLETE:
+
+✅ CREATE: POST /documents (add new document)
+✅ READ: GET /documents (list all)
+✅ READ: GET /documents/{doc_id} (get one)
+✅ UPDATE: PUT /documents/{doc_id} (update existing)
+✅ DELETE: DELETE /documents/{doc_id} (remove)
+
+REST API BEST PRACTICES:
+
+1. PUT vs PATCH
+   - PUT: Full replacement (what we implemented)
+   - PATCH: Partial update (only changed fields)
+   - We use PUT for simplicity
+
+2. Idempotency
+   - PUT is idempotent
+   - Same request multiple times = same result
+   - Safe to retry
+
+3. URL Structure
+   - Resource ID in path: /documents/{doc_id}
+   - Data in request body
+   - Standard REST pattern
+
+4. HTTP Status Codes
+   - 200 OK: Successful update
+   - 400 Bad Request: Invalid input
+   - 404 Not Found: Document doesn't exist
+   - 422 Unprocessable Entity: Validation error
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+Function: update_document()
+Lines: 385-432
+Endpoint: PUT /documents/{doc_id}
+Parameters: doc_id (path), document (body)
+
+FRONTEND IMPLEMENTATION:
+
+```javascript
+// Update a document
+const updateDocument = async (docId, newData) => {
+  const response = await fetch(
+    `http://localhost:8001/documents/${docId}`,
+    {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        doc_id: docId,
+        text: newData.text,
+        metadata: newData.metadata
+      })
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail);
+  }
+  
+  return await response.json();
+};
+
+// Usage
+try {
+  const result = await updateDocument('doc_001', {
+    text: 'Updated content...',
+    metadata: {category: 'programming', updated: true}
+  });
+  console.log(result.message);
+} catch (error) {
+  console.error('Update failed:', error.message);
+}
+```
+
+PRODUCTION IMPROVEMENTS:
+
+1. Add versioning (track document history)
+2. Implement PATCH for partial updates
+3. Add optimistic locking (prevent concurrent updates)
+4. Log all updates for audit trail
+5. Add timestamps (created_at, updated_at)
+6. Implement soft deletes
+7. Add user authentication (who updated)
+8. Validate business rules
+9. Trigger webhooks on update
+10. Cache invalidation after update
+
+SECURITY CONSIDERATIONS:
+
+1. Validate user permissions
+2. Sanitize input data
+3. Rate limit updates
+4. Log all modifications
+5. Prevent injection attacks
+6. Validate document ownership
+
+TESTING CHECKLIST:
+
+✅ Update existing document
+✅ Update non-existent document (404)
+✅ Mismatched doc_id (400)
+✅ Invalid text length (422)
+✅ Update metadata only
+✅ Update text only
+✅ Verify changes persisted
+✅ Check response format

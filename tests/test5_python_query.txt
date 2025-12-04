@@ -1,0 +1,92 @@
+================================================================================
+TEST 5: Python Requests Library Test
+================================================================================
+
+DESCRIPTION:
+This test demonstrates how to interact with the API using Python's requests 
+library. This is the recommended approach for integrating the API into Python
+applications, scripts, or notebooks.
+
+COMMAND:
+python -c "import requests; response = requests.post('http://localhost:8000/query', json={'question': 'What is FastAPI?', 'top_k': 3}); print(response.json())"
+
+FULL PYTHON SCRIPT EXAMPLE:
+import requests
+
+response = requests.post(
+    "http://localhost:8000/query",
+    json={
+        "question": "What is FastAPI?",
+        "top_k": 3
+    }
+)
+
+result = response.json()
+print(result)
+
+OUTPUT:
+{
+  'question': 'What is FastAPI?',
+  'answer': "Based on the available information: Docker containers package applications with dependencies, ensuring consistency across development and production environments. Vector databases store embeddings and enable semantic search. Popular opt... This relates to your question about 'What is FastAPI?'. The most relevant information comes from 3 source(s).",
+  'sources': [
+    {
+      'doc_id': 'doc_005',
+      'text': 'Docker containers package applications with dependencies, ensuring consistency across development and production environments.',
+      'similarity_score': 0.831,
+      'metadata': {
+        'category': 'devops',
+        'tool': 'docker'
+      }
+    },
+    {
+      'doc_id': 'doc_004',
+      'text': 'Vector databases store embeddings and enable semantic search. Popular options include Pinecone, FAISS, and ChromaDB.',
+      'similarity_score': 0.8239,
+      'metadata': {
+        'category': 'databases',
+        'type': 'vector'
+      }
+    },
+    {
+      'doc_id': 'doc_003',
+      'text': 'RAG (Retrieval-Augmented Generation) combines document retrieval with LLM generation to provide accurate, context-aware answers.',
+      'similarity_score': 0.7321,
+      'metadata': {
+        'category': 'ai',
+        'technique': 'rag'
+      }
+    }
+  ],
+  'timestamp': '2025-12-04T14:56:38.381106',
+  'processing_time_ms': 0.35
+}
+
+NOTES:
+- The requests library automatically handles JSON serialization
+- Use response.json() to parse the JSON response
+- Use response.status_code to check HTTP status
+- Processing time was 0.35 milliseconds
+- This query returned 3 sources (top_k=3)
+
+ADDITIONAL PYTHON EXAMPLES:
+
+# Add a document
+response = requests.post(
+    "http://localhost:8000/documents",
+    json={
+        "doc_id": "doc_007",
+        "text": "Your document text here...",
+        "metadata": {"category": "example"}
+    }
+)
+
+# List all documents
+response = requests.get("http://localhost:8000/documents")
+documents = response.json()
+
+# Get specific document
+response = requests.get("http://localhost:8000/documents/doc_001")
+document = response.json()
+
+# Delete a document
+response = requests.delete("http://localhost:8000/documents/doc_007")

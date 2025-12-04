@@ -1,0 +1,111 @@
+================================================================================
+EXERCISE 3 (BEGINNER): Add Logging
+================================================================================
+
+OBJECTIVE:
+Add logging to print query and processing time to console.
+
+WHAT WAS ADDED:
+Two logging blocks in the /query endpoint to track:
+1. When a query is received (with question and parameters)
+2. When processing is complete (with timing and statistics)
+
+CODE LOCATION: generativeai.py
+
+LOGGING BLOCK 1 - Query Received (Lines ~370-376):
+Added right after start_time = datetime.now()
+
+```python
+# LOG: Query received
+print(f"\n{'='*60}")
+print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] NEW QUERY RECEIVED")
+print(f"Question: {query.question}")
+print(f"Top K: {query.top_k}")
+print(f"{'='*60}")
+```
+
+LOGGING BLOCK 2 - Query Completed (Lines ~395-401):
+Added after processing_time calculation
+
+```python
+# LOG: Query completed
+print(f"\n[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] QUERY COMPLETED")
+print(f"Processing Time: {round(processing_time, 2)} ms")
+print(f"Documents Retrieved: {len(relevant_docs)}")
+print(f"Answer Length: {len(answer_text)} characters")
+print(f"{'='*60}\n")
+```
+
+EXPECTED CONSOLE OUTPUT:
+When you run a query, you'll see this in the server console:
+
+============================================================
+[2025-12-04 15:57:07] NEW QUERY RECEIVED
+Question: What is Docker?
+Top K: 2
+============================================================
+
+[2025-12-04 15:57:07] QUERY COMPLETED
+Processing Time: 0.23 ms
+Documents Retrieved: 2
+Answer Length: 245 characters
+============================================================
+
+HOW TO SEE THE LOGS:
+
+METHOD 1: Run server in terminal (not background)
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8001
+
+Then in another terminal, send a query:
+curl.exe -X POST "http://localhost:8001/query" -H "Content-Type: application/json" -d "{\"question\": \"What is Docker?\", \"top_k\": 2}"
+
+You'll see the logs appear in the first terminal!
+
+METHOD 2: Check the PowerShell window
+If you started the server in a separate PowerShell window, the logs appear there.
+
+METHOD 3: Use /docs interface
+1. Go to http://localhost:8001/docs
+2. Try POST /query endpoint
+3. Check the terminal where uvicorn is running
+
+BENEFITS OF LOGGING:
+- Monitor query patterns
+- Track performance (processing time)
+- Debug issues in production
+- Analyze user behavior
+- Identify slow queries
+
+WHAT GETS LOGGED:
+- Timestamp of query
+- The actual question asked
+- Number of documents requested (top_k)
+- Processing time in milliseconds
+- Number of documents retrieved
+- Length of generated answer
+
+WHERE IN THE CODE:
+- File: generativeai.py
+- Function: query_documents() 
+- Lines: ~370-376 (query received) and ~395-401 (query completed)
+- Triggered: Every time POST /query is called
+
+PRODUCTION IMPROVEMENTS:
+In a real production environment, you'd use Python's logging module instead of print():
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Then use:
+logger.info(f"Query received: {query.question}")
+logger.info(f"Processing time: {processing_time} ms")
+```
+
+This allows:
+- Log levels (DEBUG, INFO, WARNING, ERROR)
+- Log rotation
+- Writing to files
+- Integration with monitoring tools

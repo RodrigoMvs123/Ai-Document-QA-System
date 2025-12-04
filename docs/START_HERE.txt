@@ -1,0 +1,190 @@
+================================================================================
+HOW TO START THE PROJECT - QUICK START GUIDE
+================================================================================
+
+STEP 1: Open Terminal/PowerShell
+Navigate to your project directory:
+cd C:\Users\usuario\Desktop\Mircro1AI
+
+STEP 2: Start the Server
+Run this command:
+
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+EXPLANATION:
+- python -m uvicorn    : Run uvicorn module
+- generativeai:app     : Load 'app' from 'generativeai.py' file
+- --reload             : Auto-restart when code changes
+- --host 0.0.0.0       : Accept connections from any IP
+- --port 8000          : Run on port 8000
+
+STEP 3: Access the API
+Once you see "Application startup complete", open your browser:
+
+Interactive Docs: http://localhost:8000/docs
+Alternative Docs: http://localhost:8000/redoc
+Health Check:     http://localhost:8000/
+
+STEP 4: Stop the Server
+Press CTRL+C in the terminal
+
+================================================================================
+ALTERNATIVE PORTS
+================================================================================
+
+If port 8000 is busy, use a different port:
+
+Port 8001:
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8001
+Then visit: http://localhost:8001/docs
+
+Port 8080:
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8080
+Then visit: http://localhost:8080/docs
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: "python: command not found"
+Solution: Use full path or check Python installation
+Try: python3 -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+Problem: "No module named 'uvicorn'"
+Solution: Install dependencies first
+pip install fastapi uvicorn pydantic
+
+Problem: "Address already in use"
+Solution: Port is busy, use different port or kill existing process
+Use port 8001 instead: --port 8001
+
+Problem: "Error loading ASGI app"
+Solution: Make sure you're in the correct directory with generativeai.py
+Check: dir (should show generativeai.py)
+
+================================================================================
+COMPLETE FRESH START COMMANDS
+================================================================================
+
+# 1. Navigate to project folder
+cd C:\Users\usuario\Desktop\Mircro1AI
+
+# 2. (Optional) Install dependencies if needed
+pip install fastapi uvicorn pydantic
+
+# 3. Start the server
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+# 4. Open browser to:
+http://localhost:8000/docs
+
+# 5. Stop server when done
+Press CTRL+C
+
+================================================================================
+WHAT YOU'LL SEE IN TERMINAL
+================================================================================
+
+When server starts successfully:
+
+INFO:     Will watch for changes in these directories: ['C:\\Users\\usuario\\Desktop\\Mircro1AI']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [12345] using StatReload
+INFO:     Started server process [67890]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+
+This means it's ready! Go to http://localhost:8000/docs
+
+================================================================================
+USING THE /docs INTERFACE
+================================================================================
+
+1. Open http://localhost:8000/docs in your browser
+2. You'll see all API endpoints organized by category
+3. Click any endpoint to expand it
+4. Click "Try it out" button
+5. Fill in the parameters
+6. Click "Execute"
+7. See the response below!
+
+Example - Test a query:
+1. Find "POST /query" under "RAG" section
+2. Click it → Click "Try it out"
+3. Modify the JSON:
+   {
+     "question": "What is Python?",
+     "top_k": 2,
+     "include_sources": true
+   }
+4. Click "Execute"
+5. See the answer!
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+START SERVER:
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+OPEN DOCS:
+http://localhost:8000/docs
+
+STOP SERVER:
+CTRL+C
+
+CHECK IF RUNNING:
+curl http://localhost:8000/
+
+================================================================================
+PRODUCTION VS DEVELOPMENT
+================================================================================
+
+DEVELOPMENT (what we use):
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+- Auto-reloads on code changes
+- Detailed error messages
+- Single worker
+
+PRODUCTION (for deployment):
+python -m uvicorn generativeai:app --host 0.0.0.0 --port 8000 --workers 4
+- No auto-reload
+- Multiple workers
+- Better performance
+- Remove --reload flag
+
+================================================================================
+WINDOWS-SPECIFIC NOTES
+================================================================================
+
+If using Command Prompt (cmd):
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+If using PowerShell:
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+If using Git Bash:
+python -m uvicorn generativeai:app --reload --host 0.0.0.0 --port 8000
+
+All work the same way!
+
+================================================================================
+BACKGROUND MODE (Optional)
+================================================================================
+
+If you want to run in background and use the same terminal:
+
+PowerShell:
+Start-Job -ScriptBlock { 
+  Set-Location "C:\Users\usuario\Desktop\Mircro1AI"
+  python -m uvicorn generativeai:app --host 0.0.0.0 --port 8000 
+}
+
+To stop background job:
+Get-Job | Stop-Job
+Get-Job | Remove-Job
+
+Note: Logs won't be visible in background mode.
+Recommended: Run in foreground for development.
+
+================================================================================

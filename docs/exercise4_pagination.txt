@@ -1,0 +1,219 @@
+================================================================================
+EXERCISE 4 (INTERMEDIATE): Pagination for /documents Endpoint
+================================================================================
+
+OBJECTIVE:
+Implement pagination with skip and limit parameters for the /documents endpoint.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE LOCATION: Lines 303-355 in generativeai.py
+Modified the list_documents() function
+
+CODE CHANGES:
+
+```python
+@app.get("/documents", tags=["Documents"])
+def list_documents(
+    category: Optional[str] = None,
+    skip: int = 0,           # ← NEW: Skip N documents
+    limit: int = 10          # ← NEW: Limit results
+):
+    """
+    List all documents with pagination, optionally filtered by category.
+    
+    Parameters:
+    - category: Filter by category (optional)
+    - skip: Number of documents to skip (default: 0)
+    - limit: Maximum number of documents to return (default: 10, max: 100)
+    """
+    # Validate pagination parameters
+    if skip < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="skip must be >= 0"
+        )
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="limit must be between 1 and 100"
+        )
+    
+    docs = list(documents_db.values())
+    
+    # Filter by category if provided
+    if category:
+        docs = [d for d in docs if d.metadata.get("category") == category]
+    
+    total = len(docs)
+    
+    # Apply pagination using Python slicing
+    paginated_docs = docs[skip:skip + limit]
+    
+    return {
+        "total": total,              # Total documents (before pagination)
+        "skip": skip,                # Documents skipped
+        "limit": limit,              # Max documents per page
+        "count": len(paginated_docs), # Actual documents returned
+        "documents": [...]
+    }
+```
+
+HOW PAGINATION WORKS:
+
+Python slicing: docs[skip:skip + limit]
+- skip=0, limit=2  → docs[0:2]  → First 2 documents
+- skip=2, limit=2  → docs[2:4]  → Next 2 documents
+- skip=4, limit=2  → docs[4:6]  → Next 2 documents
+
+PARAMETERS:
+
+1. skip (default: 0)
+   - Number of documents to skip
+   - Must be >= 0
+   - Used to navigate to different pages
+
+2. limit (default: 10)
+   - Maximum documents to return
+   - Must be between 1 and 100
+   - Prevents overwhelming responses
+
+3. category (optional)
+   - Filter by category first, then paginate
+   - Works together with pagination
+
+RESPONSE FIELDS:
+
+- total: Total number of documents (after filtering, before pagination)
+- skip: Number of documents skipped
+- limit: Maximum documents requested
+- count: Actual number of documents returned (may be less than limit)
+- documents: Array of document objects
+
+TEST CASES:
+
+Test 1: First page (2 documents)
+curl.exe "http://localhost:8001/documents?skip=0&limit=2"
+
+OUTPUT:
+{
+  "total": 5,
+  "skip": 0,
+  "limit": 2,
+  "count": 2,
+  "documents": [
+    {"doc_id": "doc_001", ...},
+    {"doc_id": "doc_002", ...}
+  ]
+}
+
+Test 2: Second page (next 2 documents)
+curl.exe "http://localhost:8001/documents?skip=2&limit=2"
+
+OUTPUT:
+{
+  "total": 5,
+  "skip": 2,
+  "limit": 2,
+  "count": 2,
+  "documents": [
+    {"doc_id": "doc_003", ...},
+    {"doc_id": "doc_004", ...}
+  ]
+}
+
+Test 3: Last page (may have fewer documents)
+curl.exe "http://localhost:8001/documents?skip=4&limit=2"
+
+OUTPUT:
+{
+  "total": 5,
+  "skip": 4,
+  "limit": 2,
+  "count": 1,  ← Only 1 document left
+  "documents": [
+    {"doc_id": "doc_005", ...}
+  ]
+}
+
+Test 4: Pagination with category filter
+curl.exe "http://localhost:8001/documents?category=programming&skip=0&limit=10"
+
+Test 5: Invalid skip (negative)
+curl.exe "http://localhost:8001/documents?skip=-1&limit=2"
+
+OUTPUT: ❌ Error - "skip must be >= 0"
+
+Test 6: Invalid limit (too high)
+curl.exe "http://localhost:8001/documents?skip=0&limit=200"
+
+OUTPUT: ❌ Error - "limit must be between 1 and 100"
+
+CALCULATING PAGE NUMBERS:
+
+If you want page-based navigation:
+- Page 1: skip=0, limit=10
+- Page 2: skip=10, limit=10
+- Page 3: skip=20, limit=10
+- Page N: skip=(N-1)*limit, limit=10
+
+Total pages = ceil(total / limit)
+
+BENEFITS:
+
+1. PERFORMANCE
+   - Don't load all documents at once
+   - Reduces memory usage
+   - Faster response times
+
+2. USER EXPERIENCE
+   - Load data incrementally
+   - Better for large datasets
+   - Smooth scrolling/navigation
+
+3. BANDWIDTH
+   - Smaller response sizes
+   - Less data transfer
+   - Lower costs
+
+4. SCALABILITY
+   - Handles thousands of documents
+   - Database-friendly pattern
+   - Standard REST API practice
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+Function: list_documents()
+Lines: 303-355
+Endpoint: GET /documents
+Parameters: category, skip, limit
+
+FRONTEND IMPLEMENTATION EXAMPLE:
+
+```javascript
+// Load first page
+fetch('http://localhost:8001/documents?skip=0&limit=10')
+  .then(r => r.json())
+  .then(data => {
+    console.log(`Showing ${data.count} of ${data.total} documents`);
+    displayDocuments(data.documents);
+  });
+
+// Load next page
+const nextPage = () => {
+  const currentSkip = 0; // Track this in your app
+  const limit = 10;
+  fetch(`http://localhost:8001/documents?skip=${currentSkip + limit}&limit=${limit}`)
+    .then(r => r.json())
+    .then(data => displayDocuments(data.documents));
+};
+```
+
+PRODUCTION CONSIDERATIONS:
+
+1. Add cursor-based pagination for very large datasets
+2. Cache paginated results
+3. Add sorting options (by date, name, etc.)
+4. Return pagination metadata (has_next, has_previous)
+5. Use database-level pagination (LIMIT/OFFSET in SQL)

@@ -1,0 +1,239 @@
+================================================================================
+EXERCISE 5 (INTERMEDIATE): Filter by Similarity Score Threshold
+================================================================================
+
+OBJECTIVE:
+Add a filter to the /search endpoint that only returns results above a minimum
+similarity score threshold.
+
+✅ IMPLEMENTATION COMPLETE
+
+CODE LOCATION: Lines 458-508 in generativeai.py
+Modified the semantic_search() function
+
+CODE CHANGES:
+
+```python
+@app.get("/search", tags=["Search"])
+def semantic_search(
+    q: str,
+    limit: int = 5,
+    min_score: float = 0.0  # ← NEW: Minimum similarity threshold
+):
+    """
+    Simple semantic search without answer generation.
+    
+    Parameters:
+    - q: Search query (minimum 3 characters)
+    - limit: Maximum number of results (default: 5)
+    - min_score: Minimum similarity score threshold (0.0 to 1.0, default: 0.0)
+    """
+    # Validate min_score
+    if min_score < 0.0 or min_score > 1.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="min_score must be between 0.0 and 1.0"
+        )
+    
+    results = retrieve_documents(q, top_k=limit)
+    
+    # Filter by minimum similarity score
+    filtered_results = [
+        result for result in results
+        if result.similarity_score >= min_score
+    ]
+    
+    return {
+        "query": q,
+        "min_score": min_score,
+        "total_results": len(filtered_results),
+        "results": filtered_results
+    }
+```
+
+HOW IT WORKS:
+
+1. Retrieve top K documents (as before)
+2. Filter results: keep only those with similarity_score >= min_score
+3. Return filtered results
+
+SIMILARITY SCORES:
+
+- Range: 0.0 to 1.0
+- 1.0 = Perfect match (identical)
+- 0.9+ = Very high similarity
+- 0.7-0.9 = High similarity
+- 0.5-0.7 = Moderate similarity
+- 0.3-0.5 = Low similarity
+- <0.3 = Very low similarity
+
+PARAMETERS:
+
+1. q (required)
+   - Search query string
+   - Minimum 3 characters
+
+2. limit (default: 5)
+   - Maximum results to retrieve initially
+   - Then filtered by min_score
+
+3. min_score (default: 0.0)
+   - Minimum similarity threshold
+   - Must be between 0.0 and 1.0
+   - 0.0 = No filtering (return all)
+   - 1.0 = Only perfect matches
+
+TEST CASES:
+
+Test 1: No filtering (min_score=0.0, default)
+curl.exe "http://localhost:8001/search?q=docker&limit=5"
+
+OUTPUT:
+{
+  "query": "docker",
+  "min_score": 0.0,
+  "total_results": 5,
+  "results": [
+    {"doc_id": "doc_005", "similarity_score": 0.9381, ...},
+    {"doc_id": "doc_004", "similarity_score": 0.9356, ...},
+    {"doc_id": "doc_003", "similarity_score": 0.8798, ...},
+    {"doc_id": "doc_002", "similarity_score": 0.8521, ...},
+    {"doc_id": "doc_001", "similarity_score": 0.8316, ...}
+  ]
+}
+
+Test 2: High threshold (min_score=0.9)
+curl.exe "http://localhost:8001/search?q=docker&limit=5&min_score=0.9"
+
+OUTPUT:
+{
+  "query": "docker",
+  "min_score": 0.9,
+  "total_results": 2,  ← Only 2 results above 0.9
+  "results": [
+    {"doc_id": "doc_005", "similarity_score": 0.9381, ...},
+    {"doc_id": "doc_004", "similarity_score": 0.9356, ...}
+  ]
+}
+
+Test 3: Very high threshold (min_score=0.95)
+curl.exe "http://localhost:8001/search?q=docker&limit=5&min_score=0.95"
+
+OUTPUT:
+{
+  "query": "docker",
+  "min_score": 0.95,
+  "total_results": 0,  ← No results above 0.95
+  "results": []
+}
+
+Test 4: Moderate threshold (min_score=0.85)
+curl.exe "http://localhost:8001/search?q=python&limit=5&min_score=0.85"
+
+Test 5: Invalid threshold (too high)
+curl.exe "http://localhost:8001/search?q=docker&min_score=1.5"
+
+OUTPUT: ❌ Error - "min_score must be between 0.0 and 1.0"
+
+Test 6: Invalid threshold (negative)
+curl.exe "http://localhost:8001/search?q=docker&min_score=-0.5"
+
+OUTPUT: ❌ Error - "min_score must be between 0.0 and 1.0"
+
+USE CASES:
+
+1. QUALITY CONTROL
+   - Only show highly relevant results
+   - Filter out noise
+   - Improve user experience
+
+2. CONFIDENCE THRESHOLD
+   - Set minimum confidence level
+   - Avoid showing irrelevant content
+   - Reduce false positives
+
+3. ADAPTIVE SEARCH
+   - Start with high threshold
+   - Lower if no results found
+   - Balance precision vs recall
+
+4. CATEGORY-SPECIFIC THRESHOLDS
+   - Different thresholds for different use cases
+   - Strict for critical applications
+   - Relaxed for exploratory search
+
+RECOMMENDED THRESHOLDS:
+
+- 0.9+  : Very strict (only near-perfect matches)
+- 0.7-0.9: Strict (high-quality results)
+- 0.5-0.7: Moderate (balanced)
+- 0.3-0.5: Relaxed (exploratory)
+- 0.0-0.3: Very relaxed (show everything)
+
+BENEFITS:
+
+1. PRECISION
+   - Higher min_score = higher precision
+   - Fewer but better results
+   - Less noise
+
+2. USER CONTROL
+   - Let users adjust threshold
+   - Customize search experience
+   - Find sweet spot
+
+3. PERFORMANCE
+   - Filter early in pipeline
+   - Reduce processing
+   - Faster responses
+
+4. FLEXIBILITY
+   - Different thresholds for different queries
+   - Adaptive based on results
+   - A/B testing different values
+
+WHERE IN THE CODE:
+
+File: generativeai.py
+Function: semantic_search()
+Lines: 458-508
+Endpoint: GET /search
+Parameters: q, limit, min_score
+
+FRONTEND IMPLEMENTATION:
+
+```javascript
+// Search with quality filter
+const searchWithQuality = async (query, minScore = 0.7) => {
+  const response = await fetch(
+    `http://localhost:8001/search?q=${query}&limit=10&min_score=${minScore}`
+  );
+  const data = await response.json();
+  
+  if (data.total_results === 0) {
+    // No results, try lower threshold
+    return searchWithQuality(query, minScore - 0.1);
+  }
+  
+  return data.results;
+};
+
+// Slider for user control
+<input 
+  type="range" 
+  min="0" 
+  max="1" 
+  step="0.1" 
+  value="0.7"
+  onChange={(e) => search(query, e.target.value)}
+/>
+```
+
+PRODUCTION IMPROVEMENTS:
+
+1. Log threshold usage for analytics
+2. Auto-adjust based on result count
+3. Provide threshold recommendations
+4. Show score distribution
+5. A/B test optimal thresholds
+6. Cache results by threshold ranges

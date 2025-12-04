@@ -1,0 +1,68 @@
+================================================================================
+TEST 3: List All Documents
+================================================================================
+
+DESCRIPTION:
+This test retrieves all documents in the database. Each document shows a preview
+of the first 100 characters of text along with its metadata. You can optionally
+filter by category using query parameters.
+
+COMMAND:
+curl.exe "http://localhost:8000/documents"
+
+OUTPUT:
+{
+  "total": 6,
+  "documents": [
+    {
+      "doc_id": "doc_001",
+      "text_preview": "Python is a high-level programming language known for its simplicity and readability. It is widely u...",
+      "metadata": {
+        "category": "programming",
+        "language": "python"
+      }
+    },
+    {
+      "doc_id": "doc_002",
+      "text_preview": "FastAPI is a modern web framework for building APIs with Python. It uses type hints and provides aut...",
+      "metadata": {
+        "category": "frameworks",
+        "language": "python"
+      }
+    },
+    {
+      "doc_id": "doc_003",
+      "text_preview": "RAG (Retrieval-Augmented Generation) combines document retrieval with LLM generation to provide accu...",
+      "metadata": {
+        "category": "ai",
+        "technique": "rag"
+      }
+    },
+    {
+      "doc_id": "doc_004",
+      "text_preview": "Vector databases store embeddings and enable semantic search. Popular options include Pinecone, FAIS...",
+      "metadata": {
+        "category": "databases",
+        "type": "vector"
+      }
+    },
+    {
+      "doc_id": "doc_005",
+      "text_preview": "Docker containers package applications with dependencies, ensuring consistency across development an...",
+      "metadata": {
+        "category": "devops",
+        "tool": "docker"
+      }
+    },
+    {
+      "doc_id": "doc_006",
+      "text_preview": "Machine learning is a subset of AI that enables systems to learn from data without explicit programm...",
+      "metadata": {}
+    }
+  ]
+}
+
+NOTES:
+- Total shows 6 documents (5 pre-loaded + 1 we added)
+- Text preview is truncated to 100 characters with "..."
+- To filter by category: curl.exe "http://localhost:8000/documents?category=programming"
