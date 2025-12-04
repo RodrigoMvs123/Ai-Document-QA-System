@@ -2,6 +2,9 @@
 
 A complete RAG (Retrieval-Augmented Generation) system for document question-answering with semantic search, built with FastAPI and vanilla JavaScript.
 
+**Project Live at:**
+- https://ai-document-qa-system.vercel.app/ 
+
 ## 🚀 Features
 
 - **RAG Question Answering**: Ask questions and get AI-generated answers with source citations
